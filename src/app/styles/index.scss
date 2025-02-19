@@ -1,0 +1,8 @@
+@use './default/normalize';
+@use './default/font';
+@use './default/settings';
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

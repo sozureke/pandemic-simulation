@@ -9,19 +9,31 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.1.6"
+    "@babylonjs/core": "^7.46.0",
+    "@babylonjs/loaders": "^7.46.0",
+    "@tailwindcss/postcss": "^4.0.3",
+    "@tensorflow/tfjs": "^4.22.0",
+    "autoprefixer": "^10.4.20",
+    "cannon-es": "^0.20.0",
+    "next": "15.1.6",
+    "react": "18",
+    "react-dom": "18",
+    "sass": "^1.84.0",
+    "sass-migrator": "^2.3.1",
+    "tailwindcss": "3",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@types/three": "^0.172.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
-    "@eslint/eslintrc": "^3"
+    "postcss": "^8.5.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5"
   }
 }
