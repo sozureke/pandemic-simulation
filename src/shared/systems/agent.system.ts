@@ -33,7 +33,7 @@ export class Agent {
   public food: number = 50
   public energy: number = 100
 
-  private decisionCooldown = 0
+  private decisionCooldown = 10
 
   private zoneManager: ZoneManager
   private pathfinder: PathFinder
@@ -72,7 +72,7 @@ export class Agent {
     this.decisionCooldown -= deltaTime
     if (this.decisionCooldown <= 0) {
       this.updateBehavior()
-      this.decisionCooldown = 30
+      this.decisionCooldown = 60
     }
     if (this.path.length === 0 || this.pathIndex >= this.path.length) return
     const target = this.path[this.pathIndex]
