@@ -93,5 +93,35 @@ export class AgentManager {
 
   public update(deltaTime: number) {
     this.agents.forEach(agent => agent.update(deltaTime))
+    this.checkInfections()
+  }
+
+  private checkInfections() {
+    const infectionRadius = 2.5
+    const infectionProbability = 1.0
+
+    for (let i = 0; i < this.agents.length; i++) {
+      for (let j = i + 1; j < this.agents.length; j++) {
+        const a1 = this.agents[i]
+        const a2 = this.agents[j]
+
+        const isPairInfectious =
+          (a1.state === AgentState.Infected && a2.state === AgentState.Healthy) ||
+          (a2.state === AgentState.Infected && a1.state === AgentState.Healthy)
+
+        if (isPairInfectious) {
+          const dist = Vector3.Distance(a1.position, a2.position)
+          if (dist < infectionRadius) {
+            if (Math.random() < infectionProbability) {
+              if (a1.state === AgentState.Healthy) {
+                a1.setState(AgentState.Infected)
+              } else {
+                a2.setState(AgentState.Infected)
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

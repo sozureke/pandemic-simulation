@@ -51,10 +51,11 @@ export const Map: FC = () => {
 					rootMesh.scaling = new Vector3(0.1, 0.1, 0.1)
 				}
 				agentManagerRef.current = new AgentManager(loadedScene, zoneManagerRef.current)
-				const agent = agentManagerRef.current.spawnAgent(new Vector3(50, 4.2, 0), AgentState.Healthy)
+				const agent1 = agentManagerRef.current.spawnAgent(new Vector3(50, 4.2, 0), AgentState.Healthy)
+				const agent2 = agentManagerRef.current.spawnAgent(new Vector3(48, 4.2, 0), AgentState.Infected)
 			},
 			error => {
-				console.error('Error loading the model:', error)
+				console.error('Ошибка загрузки модели:', error)
 			}
 		)
 
