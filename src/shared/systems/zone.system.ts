@@ -48,6 +48,12 @@ export class ZoneManager {
 		return this.zones
 	}
 
+	public getRandomZoneByCategory(category: string): IZone | null {
+		const zones = this.zones.filter(zone => zone.category === category)
+		if (zones.length === 0) return null
+		return zones[Math.floor(Math.random() * zones.length)] || null
+	}
+
 	public getZoneById(id: string) {
 		return this.zones.find(zone => zone.id === id) || null
 	}
