@@ -129,15 +129,28 @@ export class Agent {
   }
 
   private updateBehavior(): void {
-    this.updateFearAndHunter()
+    // [Изменение] Проверка, не слишком ли низкая energy
+    if (this.energy < 10 && this.targetZone !== 'residential') {
+      const currentZone = this.zoneManager.getZoneForPosition(this.position)
+      if (!currentZone || currentZone.category !== 'residential') {
+        this.targetZone = 'residential'
+        this.requestNewPath(this.targetZone)
+        return
+      }
+    }
+
     const hours = Math.floor(this.timeOfDay % 24)
+
     switch (this.state) {
       case AgentState.Healthy:
       case AgentState.Vaccinated:
         if (this.fearLevel > 0.7) {
           if (this.targetZone !== 'residential') {
-            this.targetZone = 'residential'
-            this.requestNewPath(this.targetZone)
+            const currentZone = this.zoneManager.getZoneForPosition(this.position)
+            if (!currentZone || currentZone.category !== 'residential') {
+              this.targetZone = 'residential'
+              this.requestNewPath(this.targetZone)
+            }
           }
         } else {
           let zoneType = ''
@@ -145,60 +158,65 @@ export class Agent {
           else if (hours < 16) zoneType = 'business'
           else if (hours < 20) zoneType = 'public'
           else zoneType = 'residential'
-          if (this.targetZone !== zoneType) {
-            this.targetZone = zoneType
-            this.requestNewPath(this.targetZone)
+
+          const currentZone = this.zoneManager.getZoneForPosition(this.position)
+          if (!currentZone || currentZone.category !== zoneType) {
+            if (this.targetZone !== zoneType) {
+              this.targetZone = zoneType
+              this.requestNewPath(this.targetZone)
+            }
           }
         }
         break
-  
+
       case AgentState.Incubating:
         let incZone = ''
         if (hours < 8) incZone = 'residential'
         else if (hours < 16) incZone = 'business'
         else if (hours < 20) incZone = 'public'
         else incZone = 'residential'
-        if (this.targetZone !== incZone) {
-          this.targetZone = incZone
-          this.requestNewPath(this.targetZone)
+        const currZoneInc = this.zoneManager.getZoneForPosition(this.position)
+        if (!currZoneInc || currZoneInc.category !== incZone) {
+          if (this.targetZone !== incZone) {
+            this.targetZone = incZone
+            this.requestNewPath(this.targetZone)
+          }
         }
         break
-  
+
       case AgentState.Infected:
         if (this.hunterLevel > 0.5) {
           const huntZone = (hours < 16) ? 'business' : 'public'
-          if (this.targetZone !== huntZone) {
-            this.targetZone = huntZone
-            this.requestNewPath(this.targetZone)
+          const currZoneInf = this.zoneManager.getZoneForPosition(this.position)
+          if (!currZoneInf || currZoneInf.category !== huntZone) {
+            if (this.targetZone !== huntZone) {
+              this.targetZone = huntZone
+              this.requestNewPath(this.targetZone)
+            }
           }
         } else {
-          if (this.targetZone !== 'public') {
-            this.targetZone = 'public'
-            this.requestNewPath(this.targetZone)
+          if (hours >= 20 || hours < 8) {
+            const currZoneInf2 = this.zoneManager.getZoneForPosition(this.position)
+            if (!currZoneInf2 || currZoneInf2.category !== 'residential') {
+              if (this.targetZone !== 'residential') {
+                this.targetZone = 'residential'
+                this.requestNewPath(this.targetZone)
+              }
+            }
+          } else {
+            const currZoneInf2 = this.zoneManager.getZoneForPosition(this.position)
+            if (!currZoneInf2 || currZoneInf2.category !== 'public') {
+              if (this.targetZone !== 'public') {
+                this.targetZone = 'public'
+                this.requestNewPath(this.targetZone)
+              }
+            }
           }
         }
         break
     }
   }
   
-
-  private updateFearAndHunter(): void {
-    if (Math.random() < 0.01) {
-      this.fearLevel = Math.min(this.fearLevel + 0.01, 1)
-    }
-    if (Math.random() < 0.01) {
-      this.fearLevel = Math.max(this.fearLevel - 0.01, 0)
-    }
-    if (this.state === AgentState.Infected) {
-      if (Math.random() < 0.01) {
-        this.hunterLevel = Math.min(this.hunterLevel + 0.01, 1)
-      }
-      if (Math.random() < 0.01) {
-        this.hunterLevel = Math.max(this.hunterLevel - 0.01, 0)
-      }
-    }
-  }
-
   private move(direction: Vector3, deltaTime: number): void {
     const displacement = direction.scale(this.speed * deltaTime)
     this.position.addInPlace(displacement)
@@ -263,29 +281,32 @@ export class AgentManager {
   }
 
   public spawnAgent(
-  position: Vector3,
-  state: AgentState = AgentState.Healthy,
-  speed: number = 1
-): Agent {
-  const agent = new Agent(
-    this.scene,
-    position,
-    state,
-    speed,
-    this.zoneManager,
-    this.pathfinder,
-    this.cityGraph
-  )
-  if (state === AgentState.Incubating && agent.incubationTimer <= 0) {
-    agent.incubationTimer = 100
+    position: Vector3,
+    state: AgentState = AgentState.Healthy,
+    speed: number = 1
+  ): Agent {
+    const validPos = this.getValidSpawnPosition(position)
+    const agent = new Agent(
+      this.scene,
+      validPos,
+      state,
+      speed,
+      this.zoneManager,
+      this.pathfinder,
+      this.cityGraph
+    )
+  
+    if (state === AgentState.Incubating && agent.incubationTimer <= 0) {
+      agent.incubationTimer = 100
+    }
+    if (state === AgentState.Vaccinated && agent.vaccineTimer <= 0) {
+      agent.vaccineTimer = 30
+    }
+    
+    this.agents.push(agent)
+    this.zoneManager.addAgentToZone(validPos)
+    return agent
   }
-  if (state === AgentState.Vaccinated && agent.vaccineTimer <= 0) {
-    agent.vaccineTimer = 30
-  }
-  this.agents.push(agent)
-  this.zoneManager.addAgentToZone(position)
-  return agent
-}
 
   public update(deltaTime: number): void {
     this.agents.forEach(agent => agent.update(deltaTime))
@@ -358,5 +379,30 @@ export class AgentManager {
         }
       }
     })
+  }
+
+  private getValidSpawnPosition(desiredPos: Vector3): Vector3 {
+    const startId = this.pathfinder.getClosestNodeId(desiredPos)
+    if (!startId) {
+      return this.getRandomSidewalkPosition()
+    }
+    const node = this.cityGraph.getNode(startId)
+    if (!node) {
+      return this.getRandomSidewalkPosition()
+    }
+    const dist = Vector3.Distance(node.position, desiredPos)
+    if (dist > 5) {
+      return this.getRandomSidewalkPosition()
+    }
+    return desiredPos
+  }
+
+  private getRandomSidewalkPosition(): Vector3 {
+    const sidewalkNodes = this.cityGraph.getAllNodes().filter(n => n.type === 'sidewalk')
+    if (sidewalkNodes.length === 0) {
+      return new Vector3(0, 4.2, 0)
+    }
+    const randomNode = sidewalkNodes[Math.floor(Math.random() * sidewalkNodes.length)]
+    return randomNode.position.clone()
   }
 }

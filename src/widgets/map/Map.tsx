@@ -31,7 +31,6 @@ export const Map: FC = () => {
 		const cityGraph = createCityGraph()
 		const pathFinder = new PathFinder(cityGraph)
 		visualizeGraph(scene, cityGraph)
-		createBoundaryWalls(scene, { minX: -50, maxX: 55, minZ: -50, maxZ: 55 })
 
 		SceneLoader.Append(
 			'/models/',
@@ -42,6 +41,7 @@ export const Map: FC = () => {
 				zoneManagerRef.current = new ZoneManager(loadedScene)
 				zoneManagerRef.current.initializeZones(initialZones)
 				createZoneVisuals(loadedScene, zoneManagerRef.current)
+				createBoundaryWalls(scene, { minX: -50, maxX: 55, minZ: -50, maxZ: 55 })
 
 				if (rootMesh) {
 					rootMesh.rotationQuaternion = Quaternion.RotationAxis(
@@ -52,7 +52,10 @@ export const Map: FC = () => {
 				}
 				agentManagerRef.current = new AgentManager(loadedScene, zoneManagerRef.current, pathFinder, cityGraph)
 				
-				const agent2 = agentManagerRef.current.spawnAgent(new Vector3(48, 5, 0), AgentState.Healthy)
+				agentManagerRef.current.spawnAgent(new Vector3(48, 5, 0), AgentState.Healthy)
+				agentManagerRef.current.spawnAgent(new Vector3(-60, 5, 0), AgentState.Infected)
+				agentManagerRef.current.spawnAgent(new Vector3(-60, 5, 0), AgentState.Infected)
+				agentManagerRef.current.spawnAgent(new Vector3(-60, 5, 0), AgentState.Infected)
 			},
 			error => {
 				console.error('Error while uploading the model:', error)
