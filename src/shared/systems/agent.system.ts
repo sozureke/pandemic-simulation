@@ -10,6 +10,12 @@ export enum AgentState {
   Vaccinated = 'Vaccinated'
 }
 
+export interface AgentTask {
+  zoneType: string
+  reason?: string
+}
+
+
 export class Agent {
   public state: AgentState
   public position: Vector3
@@ -33,7 +39,8 @@ export class Agent {
   public food: number = 50
   public energy: number = 100
 
-  private decisionCooldown = 10
+  private decisionCooldown = 0
+  private taskQueue: AgentTask[] = []
 
   private zoneManager: ZoneManager
   private pathfinder: PathFinder
@@ -56,8 +63,6 @@ export class Agent {
     this.pathfinder = pathfinder
     this.cityGraph = cityGraph
 
-
-
     this.mesh = MeshBuilder.CreateSphere('agent', { diameter: 2 }, scene)
     this.mesh.position = this.position.clone()
     this.mesh.checkCollisions = false
@@ -74,6 +79,8 @@ export class Agent {
       this.updateBehavior()
       this.decisionCooldown = 60
     }
+    this.processCurrentTask(deltaTime)
+
     if (this.path.length === 0 || this.pathIndex >= this.path.length) return
     const target = this.path[this.pathIndex]
     const dist = Vector3.Distance(this.position, target)
@@ -129,7 +136,6 @@ export class Agent {
   }
 
   private updateBehavior(): void {
-    // [Изменение] Проверка, не слишком ли низкая energy
     if (this.energy < 10 && this.targetZone !== 'residential') {
       const currentZone = this.zoneManager.getZoneForPosition(this.position)
       if (!currentZone || currentZone.category !== 'residential') {
@@ -137,6 +143,10 @@ export class Agent {
         this.requestNewPath(this.targetZone)
         return
       }
+    }
+
+    if (this.taskQueue.length === 0) {
+      this.addRoutineTask()
     }
 
     const hours = Math.floor(this.timeOfDay % 24)
@@ -216,6 +226,32 @@ export class Agent {
         break
     }
   }
+
+  private processCurrentTask(deltaTime: number) {
+    if (this.taskQueue.length === 0) return
+
+    const currentTask = this.taskQueue[0]
+    if (this.targetZone !== currentTask.zoneType || this.path.length === 0) {
+      this.targetZone = currentTask.zoneType
+      this.requestNewPath(this.targetZone)
+    }
+
+    if (this.path.length === 0 || this.pathIndex >= this.path.length) return
+
+    const target = this.path[this.pathIndex]
+    const dist = Vector3.Distance(this.position, target)
+    if (dist < 1) {
+      this.pathIndex++
+      if (this.pathIndex >= this.path.length) {
+        this.taskQueue.shift()
+        this.path = []
+        this.pathIndex = 0
+      }
+      return
+    }
+    const direction = target.subtract(this.position).normalize()
+    this.move(direction, deltaTime)
+  }
   
   private move(direction: Vector3, deltaTime: number): void {
     const displacement = direction.scale(this.speed * deltaTime)
@@ -226,6 +262,46 @@ export class Agent {
   public setPath(path: Vector3[]): void {
     this.path = path
     this.pathIndex = 0
+  }
+
+  private addRoutineTask(): void {
+    const hours = Math.floor(this.timeOfDay % 24)
+    let zoneType = ''
+
+    switch (this.state) {
+      case AgentState.Healthy:
+      case AgentState.Vaccinated:
+        if (this.fearLevel > 0.7) {
+          zoneType = 'residential'
+        } else {
+          if (hours < 8) zoneType = 'residential'
+          else if (hours < 16) zoneType = 'business'
+          else if (hours < 20) zoneType = 'public'
+          else zoneType = 'residential'
+        }
+        break
+
+      case AgentState.Incubating:
+        if (hours < 8) zoneType = 'residential'
+        else if (hours < 16) zoneType = 'business'
+        else if (hours < 20) zoneType = 'public'
+        else zoneType = 'residential'
+        break
+
+      case AgentState.Infected:
+        if (this.hunterLevel > 0.5) {
+          zoneType = (hours < 16) ? 'business' : 'public'
+        } else {
+          if (hours >= 20 || hours < 8) zoneType = 'residential'
+          else zoneType = 'public'
+        }
+        break
+    }
+    this.taskQueue.push({ zoneType, reason: 'routine' })
+  }
+
+  public insertPriorityTask(zoneType: string, reason?: string) {
+    this.taskQueue.unshift({ zoneType, reason })
   }
 
   public setState(newState: AgentState): void {
@@ -302,7 +378,7 @@ export class AgentManager {
     if (state === AgentState.Vaccinated && agent.vaccineTimer <= 0) {
       agent.vaccineTimer = 30
     }
-    
+
     this.agents.push(agent)
     this.zoneManager.addAgentToZone(validPos)
     return agent
@@ -312,6 +388,7 @@ export class AgentManager {
     this.agents.forEach(agent => agent.update(deltaTime))
     this.checkInfections()
     this.updateFearAndHunter()
+    this.handleAvoidOrChase()
   }
 
   private checkInfections(): void {
@@ -350,6 +427,36 @@ export class AgentManager {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  private handleAvoidOrChase(): void {
+    const radius = 5
+    for (const agent1 of this.agents) {
+      if (agent1.state === AgentState.Healthy || agent1.state === AgentState.Vaccinated) {
+        const infectedNearby = this.agents.some(agent2 => {
+          if (agent2.state === AgentState.Infected) {
+            const dist = Vector3.Distance(agent1.position, agent2.position)
+            return dist < radius
+          }
+          return false
+        })
+        if (infectedNearby) {
+          agent1.insertPriorityTask('residential', 'avoid infected')
+        }
+      }
+      else if (agent1.state === AgentState.Infected) {
+        const healthyNearby = this.agents.some(agent2 => {
+          if (agent2.state === AgentState.Healthy) {
+            const dist = Vector3.Distance(agent1.position, agent2.position)
+            return dist < radius
+          }
+          return false
+        })
+        if (healthyNearby) {
+          agent1.insertPriorityTask('public', 'chase healthy')
         }
       }
     }
