@@ -27,6 +27,7 @@
 			"@/types/*": ["types/*"],
 			"@/shared/*": ["shared/*"],
 			"@/styles/*": ["app/styles/*"],
+			"@/systems/*": ["shared/systems/*"],
 			"@/assets/*": ["app/assets/*"]
 		}
 	},

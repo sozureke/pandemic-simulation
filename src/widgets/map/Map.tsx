@@ -1,6 +1,7 @@
 import { initialZones } from '@/shared/config'
-import { ZoneManager } from '@/shared/systems'
-import { cameraSetup, createZoneVisuals, setupLights } from '@/shared/utils'
+import { AgentManager, PathFinder, ZoneManager } from '@/shared/systems'
+import { AgentState } from '@/shared/systems/agent.system'
+import { cameraSetup, createBoundaryWalls, createCityGraph, createZoneVisuals, setupLights, visualizeGraph } from '@/shared/utils'
 import {
 	Color4,
 	Engine,
@@ -15,6 +16,7 @@ import { FC, useEffect, useRef } from 'react'
 export const Map: FC = () => {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null)
 	const zoneManagerRef = useRef<ZoneManager | null>(null)
+	const agentManagerRef = useRef<AgentManager | null>(null)
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -26,6 +28,10 @@ export const Map: FC = () => {
 
 		cameraSetup(scene)
 		setupLights(scene)
+		const cityGraph = createCityGraph()
+		const pathFinder = new PathFinder(cityGraph)
+		visualizeGraph(scene, cityGraph)
+		createBoundaryWalls(scene, { minX: -50, maxX: 55, minZ: -50, maxZ: 55 })
 
 		SceneLoader.Append(
 			'/models/',
@@ -44,6 +50,8 @@ export const Map: FC = () => {
 					)
 					rootMesh.scaling = new Vector3(0.1, 0.1, 0.1)
 				}
+				agentManagerRef.current = new AgentManager(loadedScene, zoneManagerRef.current)
+				agentManagerRef.current.spawnAgent(new Vector3(50, 4, 0), AgentState.Healthy)
 			},
 			error => {
 				console.error('Ошибка загрузки модели:', error)
@@ -51,17 +59,32 @@ export const Map: FC = () => {
 		)
 
 		engine.runRenderLoop(() => {
+			const deltaTime = engine.getDeltaTime() / 100
+			if (agentManagerRef.current) {
+				agentManagerRef.current.update(deltaTime)
+			}
 			scene.render()
 		})
 
+		const handleResize = () => {
+			engine.resize()
+		}
+		window.addEventListener('resize', handleResize)
+
 		return () => {
+			window.removeEventListener('resize', handleResize)
 			engine.dispose()
 		}
 	}, [])
 
 	return (
-		<>
-			<canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
-		</>
+		<canvas
+			ref={canvasRef}
+			style={{
+				width: '100vw',
+				height: '100vh',
+				display: 'block'
+			}}
+		/>
 	)
 }

@@ -1,7 +1,9 @@
+export { createBoundaryWalls } from './boundaries'
 export { cameraSetup } from './camera.utils'
 export { setupLights } from './light.utils'
 export {
-	isPointInZone,
-	updateNumberOfAgentsInZone,
-	createZoneVisuals
+	createZoneVisuals, isPointInZone,
+	updateNumberOfAgentsInZone
 } from './zone.utils'
+
+export * from './graph.utils'
