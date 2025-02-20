@@ -14,7 +14,7 @@ export const generateCrossroadNodes = (): GraphNode[] => {
   let i = 1
   for (let x = 0; x < xVals.length; x++) {
     for (let z = 0; z < zVals.length; z++) {
-      nodes.push({ id: `cross_${i}`, position: new Vector3(xVals[x], 4.2, zVals[z]), neighbors: [] })
+      nodes.push({ id: `cross_${i}`, position: new Vector3(xVals[x], 4.2, zVals[z]), neighbors: [], type: 'sidewalk' })
       i++
     }
   }
@@ -32,7 +32,7 @@ export const generateBuildingNodes = (): GraphNode[] => {
   const nodes: GraphNode[] = []
   let i = 1
   for (const pos of positions) {
-    nodes.push({ id: `building_${i}`, position: pos, neighbors: [] })
+    nodes.push({ id: `building_${i}`, position: pos, neighbors: [], type: 'building' })
     i++
   }
   return nodes

@@ -17,6 +17,8 @@ export class PathFinder {
 
   findPath(startId: string, goalId: string): string[] {
     if (startId === goalId) return [startId]
+    const goalNode = this.graph.getNode(goalId)
+    if (!goalNode) return []
 
     const openSet = new Set<string>()
     const closedSet = new Set<string>()
@@ -54,6 +56,13 @@ export class PathFinder {
         const neighborId = edge.nodeId
         if (closedSet.has(neighborId)) continue
 
+        const neighborNode = this.graph.getNode(neighborId)
+        if (!neighborNode) continue
+
+        if (goalNode.type !== 'building' && neighborNode.type === 'building') {
+          continue
+        }
+
         const currentData = dataMap.get(currentId)
         const neighborData = dataMap.get(neighborId)
         if (!currentData || !neighborData) continue
@@ -86,16 +95,13 @@ export class PathFinder {
   }
 
   private heuristic(aId: string, bId: string): number {
-    const aNode = this.graph.getNode(aId)
-    const bNode = this.graph.getNode(bId)
-    if (!aNode || !bNode) return Infinity
-    return Vector3.Distance(aNode.position, bNode.position)
+    const a = this.graph.getNode(aId)
+    const b = this.graph.getNode(bId)
+    if (!a || !b) return Infinity
+    return Vector3.Distance(a.position, b.position)
   }
 
-  private getLowestEstimated(
-    openSet: Set<string>,
-    dataMap: Map<string, PathData>
-  ): string | null {
+  private getLowestEstimated(openSet: Set<string>, dataMap: Map<string, PathData>): string | null {
     let best: string | null = null
     let minEstimate = Infinity
     for (const nodeId of openSet) {

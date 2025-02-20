@@ -1,5 +1,7 @@
 import { Vector3 } from '@babylonjs/core'
 
+export type NodeType = 'sidewalk' | 'building'
+
 export interface GraphEdge {
   nodeId: string
   cost: number
@@ -9,6 +11,7 @@ export interface GraphNode {
   id: string
   position: Vector3
   neighbors: GraphEdge[]
+  type: NodeType
 }
 
 export class Graph {
